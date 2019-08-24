@@ -1,0 +1,108 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"/>
+<title>kirakira</title>
+<!--<script src="egarjs.js"></script>-->
+<script src="https://taisukef.github.io/egarjs/egarjs.js"></script>
+<script>"use strict"
+var main = function(app) {
+	let mx = 500
+	let my = 500
+
+
+	let enemy = [];
+	for (let i = 0; i < 30; i++) {
+		const th = i / 10 * 2 * Math.PI
+		const dis = 100
+		enemy.push({
+			x: (Math.random() - .5) * dis, // Math.cos(th) * dis,
+			y: (Math.random() - .5) * dis, // Math.sin(th) * dis,
+			w: 5,
+			id: i
+		})
+	}
+	const tick = function() {
+		const v = 1
+		for (let i = 0; i < enemy.length; i++) {
+			const e = enemy[i]
+			if (!e)
+				continue
+			const th = Math.atan2(e.y, e.x)
+			e.x += Math.cos(th) * v
+			e.y += Math.sin(th) * v
+			const dis = Math.sqrt(e.x * e.x + e.y * e.y)
+			if (dis < 5)
+				enemy[i] = null
+		}
+	}
+
+	const vr = 40 / 180 * Math.PI
+	app.loop = function(g, ts, dt, vw) {
+		tick()
+
+		g.setColor(250, 150, 200)
+		for (let i = 0; i < enemy.length; i++) {
+			const e = enemy[i]
+			if (!e)
+				continue
+			let th = Math.atan2(e.y, e.x) - compass / 180 * Math.PI
+			if (th > Math.PI)
+				th -= Math.PI * 2
+			if (th < -Math.PI)
+				th += Math.PI * 2
+			if (th < vr && th > -vr) {
+				const x = th / vr * 800 + 500
+				const th2 = th += Math.PI / 2
+				const w = Math.sqrt(e.x * e.x + e.y * e.y)
+				//console.log(th, compass, x)
+				g.fillCircle(x, 500, w)
+				//g.fillCircle(500, 500, 100)
+			}
+		}
+	}
+	app.tap = function(x, y) {
+		mx = x
+		my = y
+		compass += 10
+		if (compass > 360)
+			compass -= 360
+		console.log(compass)
+	}
+	
+	let compass = 0
+	window.addEventListener("deviceorientation", function(e) {
+		// http://w3c.github.io/deviceorientation/spec-source-orientation.html
+		const degtorad = Math.PI / 180; // Degree-to-Radian conversion
+		const _x = e.beta ? e.beta * degtorad : 0; // beta value
+		const _y = e.gamma ? e.gamma * degtorad : 0; // gamma value
+		const _z = e.alpha ? e.alpha * degtorad : 0; // alpha value
+		const cX = Math.cos(_x);
+		const cY = Math.cos(_y);
+		const cZ = Math.cos(_z);
+		const sX = Math.sin(_x);
+		const sY = Math.sin(_y);
+		const sZ = Math.sin(_z);
+		// Calculate Vx and Vy components
+		const Vx = -cZ * sY - sZ * sX * cY;
+		const Vy = -sZ * sY + cZ * sX * cY;
+		// Calculate compass heading
+		var compassHeading = Math.atan(Vx / Vy);
+		// Convert compass heading to use whole unit circle
+		if (Vy < 0) {
+			compassHeading += Math.PI;
+		} else if (Vx < 0) {
+			compassHeading += 2 * Math.PI;
+		}
+		const deg = compassHeading * (180 / Math.PI); // Compass Heading (in degrees)
+//		compass = (deg + 180) % 360; // ??
+		compass = deg;
+	}, false);
+	
+	window.addEventListener("compassneedscalibration", function(e) {
+		alert("デバイスを回してキャリブレーションしてください");
+		// Your compass needs calibrating! Wave your device in a figure-eight motion
+		e.preventDefault();
+	}, true);	
+}
+</script>
+</head>
+<body><video id="video" playsinline></video></body>
+</html>
