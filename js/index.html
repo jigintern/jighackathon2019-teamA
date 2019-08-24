@@ -280,7 +280,7 @@ original
 				*/
 				const obj = objenemy1.clone()
 				const p = d.position
-				obj.position.set(p[0] * ratio, p[1] * ratio, p[2] * ratio)
+				obj.position.set(p[0] * ratio, p[1] * ratio - 500, p[2] * ratio)
 				const th = -Math.atan2(p[2], p[0])
 				obj.rotation.set(0, th, 0)
 				/*
