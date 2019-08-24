@@ -449,6 +449,7 @@ var enemies = []EnemyData{
 
 // ReadEnemies   GET "/enemy"
 func ReadEnemies(ctx *gin.Context) {
+	ctx.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 	ctx.JSON(200, generateMap(enemies))
 }
 
@@ -461,6 +462,7 @@ func KillEnemy(ctx *gin.Context) {
 	}
 	var isReject bool
 	enemies, isReject = rejectMap(id, enemies)
+	ctx.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 	ctx.JSON(200, gin.H{"is_enable": isReject})
 }
 
