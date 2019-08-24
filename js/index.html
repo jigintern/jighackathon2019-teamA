@@ -1,106 +1,413 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"/>
-<title>kirakira</title>
-<!--<script src="egarjs.js"></script>-->
-<script src="https://taisukef.github.io/egarjs/egarjs.js"></script>
-<script>"use strict"
-var main = function(app) {
-	let mx = 500
-	let my = 500
+<!--
+original
+	必要なのはスマホと1,000円のGoogle Cardboardだけ！ WebGLではじめるお手軽VR入門 - ICS MEDIA
+	https://ics.media/entry/7712
+	The MIT License (MIT) Copyright (c) 2016 ICS INC.
+-->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+<title>redrain - WebMegane</title>
 
+<meta property="og:image" content="redrain.png">
+<link rel="apple-touch-icon" href="redrain.png"/>
 
-	let enemy = [];
-	for (let i = 0; i < 30; i++) {
-		const th = i / 10 * 2 * Math.PI
-		const dis = 100
-		enemy.push({
-			x: (Math.random() - .5) * dis, // Math.cos(th) * dis,
-			y: (Math.random() - .5) * dis, // Math.sin(th) * dis,
-			id: i
-		})
+<!-- Three.js r79 -->
+<script src="https://cdn.rawgit.com/mrdoob/three.js/r79/build/three.js"></script>
+<!-- MTLLoader.js -->
+<script src="https://cdn.rawgit.com/mrdoob/three.js/r79/examples/js/loaders/MTLLoader.js"></script>
+<!-- OBJLoader.js -->
+<script src="https://cdn.rawgit.com/mrdoob/three.js/r79/examples/js/loaders/OBJLoader.js"></script>
+
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r71/three.min.js"></script>-->
+
+<script src="js/StereoEffect.js"></script>
+<script src="js/DeviceOrientationControls.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.17.0/TweenMax.min.js"></script>
+<script>
+// 
+(function() {
+	// 一辺の長さ
+	var STEP = 100;
+	var GRID_STEP = STEP * 4;
+	var BOX_STEP = 30;
+	var N_BOX = 2400;
+	
+	// シーン
+	var scene;
+	// カメラ
+	var camera;
+	// レンダラー
+	var renderer;
+	// 描画領域
+	var container;
+	// VR表示へ変換
+	var effect;
+	// DOM
+	var element;
+	// 操作
+	var controls;
+	// 時間
+	var clock;
+	// 立方体の輪郭線を格納する配列
+	var edgesPool;
+
+	/**
+	 * Initialize
+	 */
+	function init() {
+		// シーン
+		scene = new THREE.Scene();
+
+		// カメラ
+		camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 1, 3000);
+		camera.position.set(0, 1700, 0);
+		camera.far *= 10;
+		scene.add(camera);
+
+		// レンダラー
+		renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+		//renderer.setClearColor(0x0);
+		renderer.setClearColor(0x000000, 0); // the default
+		renderer.setSize(window.innerWidth, window.innerHeight);
+
+		// ピクセルレートを設定
+		if(window.devicePixelRatio) {
+			renderer.setPixelRatio(window.devicePixelRatio);
+		}
+
+		// DOM
+		element = renderer.domElement;
+
+		// 描画領域
+		container = document.getElementById("container");
+		container.appendChild(element);
+
+		// VR表示へ変換
+		effect = new THREE.StereoEffect(renderer);
+		effect.focalLength = 50;
+
+		// PCで閲覧時にマウスドラッグで操作
+		controls = new THREE.OrbitControls(camera, element);
+		controls.rotateUp(Math.PI / 4);
+		controls.target.set(
+			camera.position.x + 0.15,
+			camera.position.y,
+			camera.position.z
+		);
+		controls.noZoom = true;
+		controls.noPan = true;
+
+		clock = new THREE.Clock();
+
+		// スマートフォンの場合はジャイロセンサーでの操作へ変更
+		window.addEventListener("deviceorientation", setOrientationControls, true);
+
+		// windowのリサイズ処理
+		window.addEventListener("resize", resize, false);
+		resize();
+
+		// 光源
+		const alight = new THREE.AmbientLight(0xFFFFFF, 0.5);
+		scene.add(alight);
+		const dlight = new THREE.DirectionalLight(0xFFFFFF, .6)
+		scene.add(dlight)
+
+		// 敵生成
+		createEnemy()
+
+		// 立方体を生成
+		createBox();
+		// 床を生成
+		createBrid();
+
+		// 繰り返し処理を開始
+		loop()
 	}
-	const tick = function() {
-		const v = 1
-		for (let i = 0; i < enemy.length; i++) {
-			const e = enemy[i]
-			if (!e)
-				continue
-			const th = Math.atan2(e.y, e.x)
-			e.x += Math.cos(th) * v
-			e.y += Math.sin(th) * v
-			const dis = Math.sqrt(e.x * e.x + e.y * e.y)
-			if (dis < 5)
-				enemy[i] = null
+
+	/**
+	 * ジャイロセンサーでの操作へ変更します。
+	 */
+	function setOrientationControls(e) {
+		if (!e.alpha) {
+			return;
+		}
+		controls = new THREE.DeviceOrientationControls(camera, true);
+		controls.connect();
+		controls.update();
+
+		element.addEventListener("click", fullscreen, false);
+
+		window.removeEventListener("deviceorientation", setOrientationControls, true);
+	}
+
+	/**
+	 * 立方体の生成します。
+	 */
+	function createBox() {
+		edgesPool = [];
+
+		var geometry = new THREE.BoxGeometry(BOX_STEP, BOX_STEP, BOX_STEP, 1, 1, 1);
+		var material = new THREE.MeshBasicMaterial({ color: 0xFF0000 });
+
+		for(var i = 0; i < N_BOX; i++) {
+			var mesh = new THREE.Mesh(geometry, material);
+			// 立方体を作る
+			var egh = new THREE.EdgesHelper(mesh, 0xFF0000);
+			egh.material.linewidth = 1;
+			egh.updateMatrix();
+			scene.add(egh);
+
+			edgesPool.push(egh);
+
+			startDrop(egh);
 		}
 	}
+	function createEnemy() {
+		// can, enemy_walk, enemy_walk2
+		const load = function(name, x) {
+			const objLoader = new THREE.OBJLoader()
+			objLoader.load(name, function(object) {
+				object.scale.set(100, 100, 100);      // 縮尺の初期化
+				object.position.set(500, 1700 - 500, x);         // 位置の初期化
+				/*
+				object.rotation.set(0, 0, 0);         // 角度の初期化
+				*/
+				// objをObject3Dで包む
+				const obj = new THREE.Object3D()
+				obj.add(object)
+				scene.add(obj)
+			})
+		}
+		load('../3D_object/enemy_walk.obj', 300)
+		load('../3D_object/enemy_walk2.obj', -300)
+		load('../3D_object/can.obj', 0)
+	}
 
-	const vr = 40 / 180 * Math.PI
-	app.loop = function(g, ts, dt, vw) {
-		tick()
+	/**
+	 * 落下アニメーションを停止します。
+	 */
+	function startDrop(egh) {
+		// ランダムに立方体を配置
+		egh.position.x = STEP * Math.round(3 * 6000 * (Math.random() - 0.5) / STEP) + STEP / 2;
+		egh.position.y = 5000 * 4;
+		egh.position.z = STEP * Math.round(3 * 6000 * (Math.random() - 0.5) / STEP) + STEP / 2;
+		egh.updateMatrix();
 
-		g.setColor(250, 150, 200)
-		for (let i = 0; i < enemy.length; i++) {
-			const e = enemy[i]
-			if (!e)
-				continue
-			let th = Math.atan2(e.y, e.x) - compass / 180 * Math.PI
-			if (th > Math.PI)
-				th -= Math.PI * 2
-			if (th < -Math.PI)
-				th += Math.PI * 2
-			if (th < vr && th > -vr) {
-				const x = th / vr * 800 + 500
-				const w = Math.sqrt(e.x * e.x + e.y * e.y)
-				//console.log(th, compass, x)
-				g.fillCircle(x, 500, w)
-				//g.fillCircle(500, 500, 100)
+		// 秒数
+		var sec = 3 * Math.random() + 3;
+
+		TweenMax.to(egh.position, sec, {
+			y: 20, //STEP / 2 + 10,
+			//ease: Bounce.easeOut,
+			onComplete: endDrop,
+			onCompleteParams: [ egh ]
+		});
+	}
+
+	/**
+	 * 落下アニメーションが終了しました。
+	 */
+	function endDrop(egh) {
+		// 再度アニメーション
+		setTimeout(function() {
+			startDrop(egh)
+		}, 1000);
+	}
+
+	/**
+	 * 地面を生成します。
+	 */
+	function createBrid() {
+		var gcolor = 0xFF0000; // 0x444444
+		var grid = new THREE.GridHelper(10000, GRID_STEP, gcolor, gcolor);
+		scene.add(grid);
+	}
+
+	/**
+	 * windowがリサイズしました。
+	 */
+	function resize() {
+//		var width = container.offsetWidth;
+//		var height = container.offsetHeight;
+		var width = window.innerWidth;
+		var height = window.innerHeight;
+
+		camera.aspect = width / height;
+		camera.updateProjectionMatrix();
+
+		renderer.setSize(width, height);
+		effect.setSize(width, height);
+	}
+
+	/**
+	 * 繰り返し実行される処理です。
+	 */
+	function loop() {
+		requestAnimationFrame(loop);
+
+		update(clock.getDelta());
+		render();
+	}
+
+	/**
+	 * 更新します。
+	 */
+	function update(dt) {
+		if (edgesPool) {
+			for (var i = 0; i < edgesPool.length; i++) {
+				edgesPool[i].updateMatrix();
 			}
 		}
+		camera.updateProjectionMatrix();
+		controls.update(dt);
 	}
-	app.tap = function(x, y) {
-		mx = x
-		my = y
-		compass += 10
-		if (compass > 360)
-			compass -= 360
-		console.log(compass)
+
+	/**
+	 * レンダリングします。
+	 */
+	function render() {
+		effect.render(scene, camera);
 	}
-	
-	let compass = 0
-	window.addEventListener("deviceorientation", function(e) {
-		// http://w3c.github.io/deviceorientation/spec-source-orientation.html
-		const degtorad = Math.PI / 180; // Degree-to-Radian conversion
-		const _x = e.beta ? e.beta * degtorad : 0; // beta value
-		const _y = e.gamma ? e.gamma * degtorad : 0; // gamma value
-		const _z = e.alpha ? e.alpha * degtorad : 0; // alpha value
-		const cX = Math.cos(_x);
-		const cY = Math.cos(_y);
-		const cZ = Math.cos(_z);
-		const sX = Math.sin(_x);
-		const sY = Math.sin(_y);
-		const sZ = Math.sin(_z);
-		// Calculate Vx and Vy components
-		const Vx = -cZ * sY - sZ * sX * cY;
-		const Vy = -sZ * sY + cZ * sX * cY;
-		// Calculate compass heading
-		var compassHeading = Math.atan(Vx / Vy);
-		// Convert compass heading to use whole unit circle
-		if (Vy < 0) {
-			compassHeading += Math.PI;
-		} else if (Vx < 0) {
-			compassHeading += 2 * Math.PI;
+
+	/**
+	 * フルスクリーン表示へ切り替えます。
+	 */
+	function fullscreen() {
+		if (container.requestFullscreen) {
+			container.requestFullscreen();
+		} else if (container.msRequestFullscreen) {
+			container.msRequestFullscreen();
+		} else if (container.mozRequestFullScreen) {
+			container.mozRequestFullScreen();
+		} else if (container.webkitRequestFullscreen) {
+			container.webkitRequestFullscreen();
 		}
-		const deg = compassHeading * (180 / Math.PI); // Compass Heading (in degrees)
-//		compass = (deg + 180) % 360; // ??
-		compass = deg;
-	}, false);
+	}
+	window.addEventListener("DOMContentLoaded", init, false);
+})();
+
+window.onload = function() {
+	const USE_CAMERA_FRONT = false;
+//	var videoop = USE_CAMERA_FRONT ? true : { facingMode : { exact : "environment" } };
+//	var videoop = USE_CAMERA_FRONT ? true : { facingMode : { ideal : "environment" } };
+	var videoop = USE_CAMERA_FRONT ? true : {
+		facingMode : { ideal : "environment" },
+		width: { min: 640, ideal: 1920 },
+		height: { min: 480, ideal: 1080 }
+//		width: { min: 640, ideal: 1280, max: 1920 },
+//		height: { min: 480, ideal: 720, max: 1080 }
+	};
+	const medias = { audio: false, video: videoop };
 	
-	window.addEventListener("compassneedscalibration", function(e) {
-		alert("デバイスを回してキャリブレーションしてください");
-		// Your compass needs calibrating! Wave your device in a figure-eight motion
-		e.preventDefault();
-	}, true);	
-}
+//	dump(navigator.mediaDevices.getSupportedConstraints());
+	navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia
+	if (navigator.getUserMedia) {
+		navigator.getUserMedia(medias, function(stream) {
+				video.srcObject = stream;
+			}, function(err) {
+				alert(err);
+			}
+		)
+	} else {
+		navigator.mediaDevices.getUserMedia(medias).then(function(stream) {
+			video.srcObject = stream;
+		}).catch(function(err) {
+			alert(err);
+		})
+	}
+	var g = canvas.getContext("2d");
+	var draw = function() {
+		const cw = window.innerWidth * window.devicePixelRatio;
+		const ch = window.innerHeight * window.devicePixelRatio;
+		canvas.width = cw;
+		canvas.height = ch;
+		
+		const vw = video.videoWidth;
+		const vh = video.videoHeight;
+		const cw2 = cw / 2;
+		const caspect = ch / cw2;
+		const vaspect = vh / vw;
+		
+		const fitwidth = caspect < vaspect; // auto fit screen
+//		const fitwidth = true; // force fit width
+//		const fitwidth = false; // force fit height
+		
+		if (fitwidth) {
+			const vh2 = vw * caspect;
+			if (vh2 > vh) {
+				const cy = (vh2 - vh) / 2 / (vw / cw2);
+				const ch2 = cw2 * vaspect;
+				g.drawImage(video, 0, 0, vw, vh, 0, cy, cw2, ch2);
+				g.drawImage(video, 0, 0, vw, vh, cw2, cy, cw2, ch2);
+			} else {
+				const vy = (vh - vh2) / 2;
+				g.drawImage(video, 0, vy, vw, vh2, 0, 0, cw2, ch);
+				g.drawImage(video, 0, vy, vw, vh2, cw2, 0, cw2, ch);
+			}
+		} else {
+			const vw2 = vh / caspect;
+			if (vw2 > vw) {
+				const cx = (vw2 - vw) / 2 / (vh / ch);
+				const cw3 = ch / vaspect;
+				console.log(cx);
+				g.drawImage(video, 0, 0, vw, vh, cx, 0, cw3, ch);
+				g.drawImage(video, 0, 0, vw, vh, cw2 + cx, 0, cw3, ch);
+			} else {
+				const vx = (vw - vw2) / 2;
+				g.drawImage(video, vx, 0, vw2, vh, 0, 0, cw2, ch);
+				g.drawImage(video, vx, 0, vw2, vh, cw2, 0, cw2, ch);
+			}
+		}
+		requestAnimationFrame(draw);
+	};
+	draw();
+	
+	var mode = 0;
+	var filters = [ "", "grayscale(100%)", "sepia(100%)", "contrast(200%)", "hue-rotate(90deg)", "invert(100%)" ];
+	canvas.onmousedown = function() {
+		mode = (mode + 1) % filters.length;
+		canvas.style.filter = filters[mode];
+	};
+};
+
 </script>
+<style>
+body {
+	margin: 0;
+	overflow: hidden;
+}
+#video {
+	position: absolute;
+	display: block;
+	width: 100%;
+	transform: scale(0.01);
+	z-index: -1;
+}
+#canvas {
+	z-index: 0;
+	display: block;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+}
+#container {
+	z-index: 4;
+	position: absolute;
+	top: 0;
+	left: 0;
+	x-opacity: 0.5;
+}
+</style>
 </head>
-<body><video id="video" playsinline></video></body>
+<body>
+<div id="container"></div>
+<canvas id="canvas"></canvas>
+<video id="video" autoplay playsinline></video>
+</body>
 </html>
