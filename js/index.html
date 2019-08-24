@@ -41,7 +41,7 @@ var main = function(app) {
 			const e = enemy[i]
 			if (!e)
 				continue
-			const th = Math.atan2(e.y, e.x) - compass
+			const th = Math.atan2(e.y, e.x) - compass / 180 * Math.PI
 			if (th < vr && th > -vr) {
 				const x = th / vr * 800 + 500
 				const w = Math.sqrt(e.x * e.x + e.y * e.y)
@@ -54,9 +54,9 @@ var main = function(app) {
 	app.tap = function(x, y) {
 		mx = x
 		my = y
-		compass += 10 / 180 * Math.PI
-		if (compass > 2 * Math.PI)
-			compass -= 2 * Math.PI
+		compass += 10
+		if (compass > 360)
+			compass -= 360
 		console.log(compass)
 	}
 	
