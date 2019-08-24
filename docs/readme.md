@@ -68,3 +68,19 @@ ex)
 
 ユニークid(uid)が:uidである敵を削除し、倒したことにします
 ex) "/api/v1/enemy/1/kill" -> uid: 1の敵を倒したことにする
+
+また、指定したuidの敵が存在したかどうか、以下のレスポンスが返されます。
+
+```JSON
+{
+    "is_enable": :uidの敵が存在したかどうか(bool)
+}
+```
+
+ex)
+
+```JSON
+{
+    "is_enable": false
+}
+```
