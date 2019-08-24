@@ -125,7 +125,8 @@ original
 		createBrid();
 		
 		const loadEnemy = function() {
-			const apienemy = "http://172.20.10.4:8080/api/v1/enemy/"
+//			const apienemy = "http://172.20.10.4:8080/api/v1/enemy/"
+			const apienemy = "api-enemy-test.json"
 			callAPI(apienemy, function(data) {
 				console.log(data)
 				for (let i = 0; i < data.length; i++) {
@@ -260,7 +261,7 @@ original
 		load('../3D_object/enemy_red_walk2.obj', function(obj) {
 			objenemy1 = obj
 		})
-		load('../3D_object/can.obj', function(obj) {
+		load('../3D_object/jigcan.obj', function(obj) {
 			objcan = obj
 		})
 	}
