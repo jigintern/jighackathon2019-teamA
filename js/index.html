@@ -28,7 +28,7 @@ original
 <script src="js/OrbitControls.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.17.0/TweenMax.min.js"></script>
 <script>
-// 
+//
 (function() {
 	// 一辺の長さ
 	var STEP = 100;
@@ -123,9 +123,76 @@ original
 		createBox();
 		// 床を生成
 		createBrid();
+		
+		const loadEnemy = function() {
+			const apienemy = "http://172.20.10.4:8080/api/v1/enemy/"
+			callAPI(apienemy, function(data) {
+				console.log(data)
+				for (let i = 0; i < data.length; i++) {
+					const d = data[i]
+					const ratio = 100
+
+					/*
+					enemy.push({
+						x: (Math.random() - .5) * dis, // Math.cos(th) * dis,
+						y: (Math.random() - .5) * dis, // Math.sin(th) * dis,
+						w: 5,
+						id: i
+					})
+					*/
+					const obj = objenemy1.clone()
+					const p = d.position
+					obj.position.set(p[0] * ratio, p[1] * ratio, p[2] * ratio);
+					/*
+					object.rotation.set(0, 0, 0);         // 角度の初期化
+					*/
+					// objをObject3Dで包む
+					
+					const tobj = new THREE.Object3D()
+					tobj.add(obj)
+					scene.add(tobj)
+					console.log(d)
+				}
+			})
+		}
+		setTimeout(loadEnemy, 3000)
 
 		// 繰り返し処理を開始
 		loop()
+	}
+	function callAPI(url, callback) {
+		var xhr = new XMLHttpRequest();
+		xhr.onreadystatechange = function() {
+		    switch (xhr.readyState) {
+		        case 0:
+		            // 未初期化状態.
+		            console.log( 'uninitialized!' );
+		            break;
+		        case 1: // データ送信中.
+		            console.log( 'loading...' );
+		            break;
+		        case 2: // 応答待ち.
+		            console.log( 'loaded.' );
+		            break;
+		        case 3: // データ受信中.
+		            console.log( 'interactive... '+xhr.responseText.length+' bytes.' );
+		            break;
+		        case 4: // データ受信完了.
+		            if( xhr.status == 200 || xhr.status == 304 ) {
+		                var data = xhr.responseText; // responseXML もあり
+						//console.log( 'COMPLETE! :'+ data );
+						callback(JSON.parse(data))
+		            } else {
+		                console.log( 'Failed. HttpStatus: '+ xhr.statusText)
+		            }
+		            break;
+		    }
+		};		
+		xhr.open('GET', url, false)
+		// POST 送信の場合は Content-Type は固定.
+//		xhr.setRequestHeader( 'Content-Type', 'application/x-www-form-urlencoded' );
+		xhr.send()
+		xhr.abort(); // 再利用する際にも abort() しないと再利用できないらしい.
 	}
 
 	/**
@@ -153,7 +220,7 @@ original
 		var geometry = new THREE.BoxGeometry(BOX_STEP, BOX_STEP, BOX_STEP, 1, 1, 1);
 		var material = new THREE.MeshBasicMaterial({ color: 0xFF0000 });
 
-		for(var i = 0; i < N_BOX; i++) {
+		for (var i = 0; i < N_BOX; i++) {
 			var mesh = new THREE.Mesh(geometry, material);
 			// 立方体を作る
 			var egh = new THREE.EdgesHelper(mesh, 0xFF0000);
@@ -166,25 +233,44 @@ original
 			startDrop(egh);
 		}
 	}
+	let objenemy1, objenemy2, objcan
+	let enemy = []
 	function createEnemy() {
 		// can, enemy_walk, enemy_walk2
-		const load = function(name, x) {
+		const load = function(name, callback) {
 			const objLoader = new THREE.OBJLoader()
 			objLoader.load(name, function(object) {
 				object.scale.set(100, 100, 100);      // 縮尺の初期化
-				object.position.set(500, 1700 - 500, x);         // 位置の初期化
+				//object.position.set(500, 1700 - 500, x);         // 位置の初期化
 				/*
 				object.rotation.set(0, 0, 0);         // 角度の初期化
 				*/
 				// objをObject3Dで包む
+				/*
 				const obj = new THREE.Object3D()
 				obj.add(object)
 				scene.add(obj)
+				*/
+				callback(object)
 			})
 		}
-		load('../3D_object/enemy_walk.obj', 300)
-		load('../3D_object/enemy_walk2.obj', -300)
-		load('../3D_object/can.obj', 0)
+		load('../3D_object/enemy_walk.obj', function(obj) {
+			objenemy1 = obj
+		})
+		load('../3D_object/enemy_walk2.obj', function(obj) {
+			objenemy1 = obj
+		})
+		load('../3D_object/can.obj', function(obj) {
+			objcan = obj
+		})
+	}
+	function updateEnemy() {
+		for (let i = 0; i < enemy.length; i++) {
+			const e = enemy[i]
+			if (!e)
+				continue
+		//	e.x += 
+		}
 	}
 
 	/**
@@ -247,10 +333,10 @@ original
 	 * 繰り返し実行される処理です。
 	 */
 	function loop() {
-		requestAnimationFrame(loop);
+		requestAnimationFrame(loop)
 
-		update(clock.getDelta());
-		render();
+		update(clock.getDelta())
+		render()
 	}
 
 	/**
@@ -258,10 +344,12 @@ original
 	 */
 	function update(dt) {
 		if (edgesPool) {
-			for (var i = 0; i < edgesPool.length; i++) {
+			for (let i = 0; i < edgesPool.length; i++) {
 				edgesPool[i].updateMatrix();
 			}
 		}
+		updateEnemy()
+
 		camera.updateProjectionMatrix();
 		controls.update(dt);
 	}
