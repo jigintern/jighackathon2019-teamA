@@ -55,6 +55,7 @@ original
 	// 立方体の輪郭線を格納する配列
 	var edgesPool;
 
+	let enemydata
 	/**
 	 * Initialize
 	 */
@@ -120,40 +121,29 @@ original
 		createEnemy()
 
 		// 立方体を生成
-		createBox();
+		//createBox();
 		// 床を生成
-		createBrid();
+		//createBrid();
 		
 		const loadEnemy = function() {
+
 //			const apienemy = "http://172.20.10.4:8080/api/v1/enemy/"
 			const apienemy = "api-enemy-test.json"
 			callAPI(apienemy, function(data) {
-				console.log(data)
+				//console.log(data)
+				enemydata = data
 				for (let i = 0; i < data.length; i++) {
-					const d = data[i]
-					const ratio = 100
-
-					/*
-					enemy.push({
-						x: (Math.random() - .5) * dis, // Math.cos(th) * dis,
-						y: (Math.random() - .5) * dis, // Math.sin(th) * dis,
-						w: 5,
-						id: i
-					})
-					*/
-					const obj = objenemy1.clone()
-					const p = d.position
-					obj.position.set(p[0] * ratio, p[1] * ratio, p[2] * ratio);
-					/*
-					object.rotation.set(0, 0, 0);         // 角度の初期化
-					*/
-					// objをObject3Dで包む
-					
-					const tobj = new THREE.Object3D()
-					tobj.add(obj)
-					scene.add(tobj)
-					console.log(d)
+					data[i].spawn = false
 				}
+				console.log(enemydata)
+
+				// put can
+				const tobj2 = new THREE.Object3D()
+				objcan.rotation.set(90, 0, 0) // 横
+				tobj2.add(objcan)
+				scene.add(tobj2)
+
+				startt = new Date().getTime()
 			})
 		}
 		setTimeout(loadEnemy, 3000)
@@ -265,12 +255,62 @@ original
 			objcan = obj
 		})
 	}
+	let startt
 	function updateEnemy() {
+		if (!startt)
+			return
+		const dt = (new Date().getTime() - startt) / 1000
+
+		const data = enemydata
+		for (let i = 0; i < data.length; i++) {
+			const d = data[i]
+			const ratio = 500
+
+			if (!d.spawn && dt > d.spawn_time) {
+				d.spawn = true
+
+
+				/*
+				enemy.push({
+					x: (Math.random() - .5) * dis, // Math.cos(th) * dis,
+					y: (Math.random() - .5) * dis, // Math.sin(th) * dis,
+					w: 5,
+					id: i
+				})
+				*/
+				const obj = objenemy1.clone()
+				const p = d.position
+				obj.position.set(p[0] * ratio, p[1] * ratio, p[2] * ratio)
+				const th = -Math.atan2(p[2], p[0])
+				obj.rotation.set(0, th, 0)
+				/*
+				object.rotation.set(0, 0, 0);         // 角度の初期化
+				*/
+				// objをObject3Dで包む
+				
+				const tobj = new THREE.Object3D()
+				tobj.add(obj)
+				scene.add(tobj)
+				tobj.data = d
+				enemy.push(tobj)
+			}
+		}
+
 		for (let i = 0; i < enemy.length; i++) {
 			const e = enemy[i]
 			if (!e)
 				continue
-		//	e.x += 
+			const p = e.data.position
+			const th = Math.atan2(p[2], p[0]) + Math.PI
+			e.position.x += Math.cos(th) * 10
+			e.position.z += Math.sin(th) * 10
+			e.updateMatrix();
+			const dis = Math.sqrt(e.position.x * e.position.x + e.position.z * e.position.z)
+			if (i == 0)
+				console.log(e.position.x)
+			if (dis < 10) {
+				enemy[i] = null
+			}
 		}
 	}
 
