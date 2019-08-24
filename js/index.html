@@ -231,7 +231,7 @@ original
 		const load = function(name, callback) {
 			const objLoader = new THREE.OBJLoader()
 			objLoader.load(name, function(object) {
-				object.scale.set(100, 100, 100);      // 縮尺の初期化
+				object.scale.set(1000, 1000, 1000);      // 縮尺の初期化
 				//object.position.set(500, 1700 - 500, x);         // 位置の初期化
 				/*
 				object.rotation.set(0, 0, 0);         // 角度の初期化
@@ -264,7 +264,7 @@ original
 		const data = enemydata
 		for (let i = 0; i < data.length; i++) {
 			const d = data[i]
-			const ratio = 500
+			const ratio = 1000
 
 			if (!d.spawn && dt > d.spawn_time) {
 				d.spawn = true
