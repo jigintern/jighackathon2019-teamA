@@ -42,7 +42,7 @@ var main = function(app) {
 			const e = enemy[i]
 			if (!e)
 				continue
-			const th = Math.atan2(e.y, e.x) - compass / 180 * Math.PI
+			let th = Math.atan2(e.y, e.x) - compass / 180 * Math.PI
 			if (th > Math.PI)
 				th -= Math.PI * 2
 			if (th < -Math.PI)
