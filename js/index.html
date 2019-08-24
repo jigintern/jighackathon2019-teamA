@@ -43,6 +43,10 @@ var main = function(app) {
 			if (!e)
 				continue
 			const th = Math.atan2(e.y, e.x) - compass / 180 * Math.PI
+			if (th > Math.PI)
+				th -= Math.PI * 2
+			if (th < -Math.PI)
+				th += Math.PI * 2
 			if (th < vr && th > -vr) {
 				const x = th / vr * 800 + 500
 				const w = Math.sqrt(e.x * e.x + e.y * e.y)
