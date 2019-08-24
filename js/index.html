@@ -19,12 +19,12 @@ var main = function(app) {
 		})
 	}
 	const tick = function() {
+		const v = 1
 		for (let i = 0; i < enemy.length; i++) {
 			const e = enemy[i]
 			if (!e)
 				continue
 			const th = Math.atan2(e.y, e.x)
-			const v = 0.1
 			e.x += Math.cos(th) * v
 			e.y += Math.sin(th) * v
 			const dis = Math.sqrt(e.x * e.x + e.y * e.y)
