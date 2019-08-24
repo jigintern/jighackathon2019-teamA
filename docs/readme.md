@@ -1,5 +1,9 @@
 # API仕様書
 
+## 初めに以下を行ってください
+`goの導入`
+`go get github.com/gin-gonic/gin`
+
 ## ステージデータ(全ての敵のデータ)を取得する
 ### GET "/api/v1/enemy/"
 
