@@ -260,15 +260,13 @@ original
 		if (!startt)
 			return
 		const dt = (new Date().getTime() - startt) / 1000
-
 		const data = enemydata
 		for (let i = 0; i < data.length; i++) {
 			const d = data[i]
 			const ratio = 1000
 
-			if (!d.spawn && dt > d.spawn_time) {
+			if ((!d.spawn) && dt > d.spawn_time) {
 				d.spawn = true
-
 
 				/*
 				enemy.push({
